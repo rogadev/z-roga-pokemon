@@ -1,10 +1,13 @@
 <script setup>
-// ...
+import Map from "./components/Map.vue";
+import TopBar from "./components/ActionBar.vue";
+import ActionBar from "./components/TopBar.vue";
 </script>
 
 <template>
   <div>
-    <h1 class="text-8xl font-bold">stuff</h1>
-    <h1>things</h1>
+    <TopBar />
+    <Map />
+    <ActionBar />
   </div>
 </template>
