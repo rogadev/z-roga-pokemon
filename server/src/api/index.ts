@@ -1,9 +1,8 @@
 import express from 'express'
-
-import MessageResponse from '../interface/MessageResponse'
-// TODO import todos from './todos/todos.routes'
-
 const router = express.Router()
+
+import search from './search'
+import MessageResponse from '../interface/MessageResponse'
 
 router.get<{}, MessageResponse>('/', (req, res) => {
   res.json({
@@ -11,6 +10,6 @@ router.get<{}, MessageResponse>('/', (req, res) => {
   })
 })
 
-// TODO router.use('/todos', todos)
+router.use('/search', search)
 
 export default router
