@@ -1,12 +1,11 @@
+import { computed } from '@vue/reactivity'
+import { log } from 'console'
 import { onMounted, onUnmounted, ref } from 'vue'
 
 export default function useGeolocation() {
-  const latitude = ref(0)
-  const longitude = ref(0)
-  const error = ref(null)
-  const watcher = null
+  let watcher = null
 
-  const updateLocation = (position: Position) => {
+  const updateLocation = (position) => {
     latitude.value = position.coords.latitude
     longitude.value = position.coords.longitude
   }
@@ -28,5 +27,6 @@ export default function useGeolocation() {
     if (watcher) navigator.geolocation.clearWatch(watcher)
   })
 
-  return { latitude, longitude, error }
+  const coords = computed(() => [latitude.value, longitude.value])
+  return { coords, error, supported }
 }

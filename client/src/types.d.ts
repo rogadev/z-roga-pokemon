@@ -1,1 +1,1 @@
-export type Position = [number, number]
+type Position = [number, number]
