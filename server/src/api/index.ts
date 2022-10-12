@@ -2,6 +2,7 @@ import express from 'express'
 const router = express.Router()
 
 import search from './search'
+import game from './game'
 import MessageResponse from '../interface/MessageResponse'
 
 router.get<{}, MessageResponse>('/', (req, res) => {
@@ -11,5 +12,6 @@ router.get<{}, MessageResponse>('/', (req, res) => {
 })
 
 router.use('/search', search)
+router.use('/game', game)
 
 export default router
