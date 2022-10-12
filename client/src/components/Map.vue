@@ -4,6 +4,7 @@ import { onMounted, onUnmounted, ref, computed } from "vue";
 import useGeolocation from "../lib/useGeolocation";
 import type { Ref } from "vue";
 
+// Public token
 mapboxgl.accessToken =
   "pk.eyJ1IjoicnlhbnJvZ2EiLCJhIjoiY2tyeHB6eDNnMHN3NTJ3czNicmNza2R6aSJ9.p6aLtvqhkcKKX9w2jYzA6g";
 
@@ -12,9 +13,8 @@ const longitude: Ref<number> = ref(0);
 const error: Ref<null | string> = ref(null);
 const supported: Ref<boolean> = ref(false);
 const loading: Ref<boolean> = ref(true);
-let map = null;
-
 const coords = computed(() => [longitude.value, latitude.value]);
+let map = null;
 
 const updateLocation = (position) => {
   latitude.value = position.coords.latitude;
@@ -46,7 +46,10 @@ onMounted(async () => {
   });
 
   if (!supported) {
-    alert("Geolocation is not supported. Game requires geolocation to play.");
+    alert(
+      "Geolocation is required but is not supported. Please accept permissions or try another browser."
+    );
+    supported.value = "navigator" in window && "geolocation" in navigator;
   } else {
     watcher = navigator.geolocation.watchPosition(updateLocation, onError);
   }
@@ -64,8 +67,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- place dead center of page -->
-
+  <!-- Show error if finished loading but geolocation not supported -->
   <div v-if="!supported && !loading" class="origin-center">
     <h1 class="text-center">
       Sorry, this game requires geolocation and either your browser doesn't
@@ -73,5 +75,6 @@ onUnmounted(() => {
       or try playing from another device.
     </h1>
   </div>
-  <div class="z-0 w-[100vw] h-[100vh] bg-white" id="map" />
+  <!-- Otherwise, show map -->
+  <div v-else class="z-0 w-[100vw] h-[100vh] bg-white" id="map" />
 </template>
