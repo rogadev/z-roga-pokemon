@@ -1,35 +1,43 @@
 <script lang="ts" setup>
+// @ts-ignore
 import mapboxgl from "mapbox-gl";
 import { onMounted, onUnmounted, ref, computed } from "vue";
-import useGeolocation from "../lib/useGeolocation";
+// import useGeolocation from "../lib/useGeolocation";
 import type { Ref } from "vue";
+
+import usePokemonStore from "../stores/pokemon";
+const pokemonStore = usePokemonStore();
+(async () => await pokemonStore.fetchPokemon())();
 
 // Public token
 mapboxgl.accessToken =
   "pk.eyJ1IjoicnlhbnJvZ2EiLCJhIjoiY2tyeHB6eDNnMHN3NTJ3czNicmNza2R6aSJ9.p6aLtvqhkcKKX9w2jYzA6g";
 
-const latitude: Ref<number> = ref(0);
-const longitude: Ref<number> = ref(0);
+const latitude: Ref<number> = ref(49.165997314090326);
+const longitude: Ref<number> = ref(-123.93990746794816);
 const error: Ref<null | string> = ref(null);
 const supported: Ref<boolean> = ref(false);
 const loading: Ref<boolean> = ref(true);
-const coords = computed(() => [longitude.value, latitude.value]);
-let map = null;
+const coords: any = computed(() => [longitude.value, latitude.value]);
+let map: mapboxgl.Map | null = null;
 
-const updateLocation = (position) => {
+const updateLocation = (position: {
+  coords: { latitude: number; longitude: number };
+}) => {
   latitude.value = position.coords.latitude;
   longitude.value = position.coords.longitude;
-  map.flyTo({
-    center: [position.coords.longitude, position.coords.latitude],
-    zoom: 18,
-  });
+  if (map)
+    map.flyTo({
+      center: [position.coords.longitude, position.coords.latitude],
+      zoom: 18,
+    });
 };
 
-const onError = (err: PositionError) => {
-  error.value = err.message;
+const onError = (err: any) => {
+  error.value = err?.message || "An error occurred. No message was provided.";
 };
 
-let watcher: null;
+let watcher: number | null;
 
 onMounted(async () => {
   supported.value = "navigator" in window && "geolocation" in navigator;
@@ -39,16 +47,17 @@ onMounted(async () => {
     style: "mapbox://styles/ryanroga/cl91jfcnw001215l2vt71oibq", // style URL
     center: coords.value, // starting position [lng, lat]
     zoom: 18, // starting zoom
-    projection: "globe", // display the map as a 3D globe
+    projection: { name: "globe" }, // display the map as a 3D globe
   });
   map.on("style.load", () => {
-    map.setFog({}); // Set the default atmosphere style
+    if (map) map.setFog({}); // Set the default atmosphere style
   });
 
   if (!supported) {
     alert(
       "Geolocation is required but is not supported. Please accept permissions or try another browser."
     );
+    // @ts-ignore
     supported.value = "navigator" in window && "geolocation" in navigator;
   } else {
     watcher = navigator.geolocation.watchPosition(updateLocation, onError);
@@ -61,7 +70,7 @@ onMounted(async () => {
  * On unmount, clear the geolocation watcher and remove the map
  */
 onUnmounted(() => {
-  map.remove();
+  if (map) map.remove();
   if (watcher) navigator.geolocation.clearWatch(watcher);
 });
 </script>
