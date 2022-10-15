@@ -1,1 +1,0 @@
-type Position = [number, number]
