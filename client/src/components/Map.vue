@@ -1,60 +1,89 @@
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from "vue";
-import L from "leaflet";
+// @ts-ignore
+import mapboxgl from "mapbox-gl";
+import { onMounted, onUnmounted, ref, computed } from "vue";
+// import useGeolocation from "../lib/useGeolocation";
+import type { Ref } from "vue";
+
+import usePokemonStore from "../stores/pokemon";
+const pokemonStore = usePokemonStore();
+(async () => await pokemonStore.fetchPokemon())();
+
+// Public token
+mapboxgl.accessToken =
+  "pk.eyJ1IjoicnlhbnJvZ2EiLCJhIjoiY2tyeHB6eDNnMHN3NTJ3czNicmNza2R6aSJ9.p6aLtvqhkcKKX9w2jYzA6g";
+
+const latitude: Ref<number> = ref(49.165997314090326);
+const longitude: Ref<number> = ref(-123.93990746794816);
+const error: Ref<null | string> = ref(null);
+const supported: Ref<boolean> = ref(false);
+const loading: Ref<boolean> = ref(true);
+const coords: any = computed(() => [longitude.value, latitude.value]);
+let map: mapboxgl.Map | null = null;
+
+const updateLocation = (position: {
+  coords: { latitude: number; longitude: number };
+}) => {
+  latitude.value = position.coords.latitude;
+  longitude.value = position.coords.longitude;
+  if (map)
+    map.flyTo({
+      center: [position.coords.longitude, position.coords.latitude],
+      zoom: 18,
+    });
+};
+
+const onError = (err: any) => {
+  error.value = err?.message || "An error occurred. No message was provided.";
+};
+
+let watcher: number | null;
 
 onMounted(async () => {
-  let startLocation = [49.158797462428886, -123.96731759444086];
+  supported.value = "navigator" in window && "geolocation" in navigator;
 
-  const map = L.map("map", {
-    dragging: false,
-    scrollWheelZoom: "center",
-    center: startLocation,
-    zoom: 16,
-    doubleClickZoom: false,
-    boxZoom: false,
+  map = new mapboxgl.Map({
+    container: "map", // container ID
+    style: "mapbox://styles/ryanroga/cl91jfcnw001215l2vt71oibq", // style URL
+    center: coords.value, // starting position [lng, lat]
+    zoom: 18, // starting zoom
+    projection: { name: "globe" }, // display the map as a 3D globe
   });
-  map.removeControl(map.zoomControl); // Remove zoom control icons from map
+  map.on("style.load", () => {
+    if (map) map.setFog({}); // Set the default atmosphere style
+  });
 
-  const location = ref(startLocation);
-
-  let posWatch = watchPos();
-
-  function watchPos() {
-    return navigator.geolocation.watchPosition(
-      (pos) => {
-        const { coords } = pos;
-        location.value = [coords.latitude, coords.longitude];
-        centerMap();
-      },
-      (e) => {
-        console.log(e);
-      }
+  if (!supported) {
+    alert(
+      "Geolocation is required but is not supported. Please accept permissions or try another browser."
     );
+    // @ts-ignore
+    supported.value = "navigator" in window && "geolocation" in navigator;
+  } else {
+    watcher = navigator.geolocation.watchPosition(updateLocation, onError);
   }
 
-  const tileLayer = L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: "abcd",
-      maxZoom: 18,
-      minZoom: 14,
-    }
-  );
+  loading.value = false;
+});
 
-  tileLayer.addTo(map);
-
-  let timeout;
-  function centerMap() {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      map.panTo(location.value);
-    }, 500);
-  }
+/**
+ * On unmount, clear the geolocation watcher and remove the map
+ */
+onUnmounted(() => {
+  if (map) map.remove();
+  if (watcher) navigator.geolocation.clearWatch(watcher);
 });
 </script>
 
 <template>
-  <div class="z-0 w-[100vw] h-[100vh] bg-white" id="map" />
+  <!-- Show error if finished loading but geolocation not supported -->
+  <div v-if="!supported && !loading" class="origin-center">
+    <h1 class="text-center">
+      Sorry, this game requires geolocation and either your browser doesn't
+      support it or geolocation has been turned off. Please turn on geolocation
+      or try playing from another device.
+    </h1>
+  </div>
+  <!-- Otherwise, show map -->
+  <div v-else class="z-0 w-[100vw] h-[100vh] bg-white" id="map" />
 </template>
